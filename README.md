@@ -1,8 +1,8 @@
-# Assignment 5 - OULAD Student Click Aggregator
+# OULAD Student Click Aggregator
 
-In this assignment, we are tasked to read a very large dataset from the Open University Learning Analytics Dataset (OULAD) which is collected from students in online courses in the UK. The dataset we worked with specifically is studentVle.csv which has over 10 million rows of data, containing module codes and presentation codes, the student and site IDs, as well as the date in days from assessment, and the sum total of clicks by a given student on that date. The tasks was to read this file (.5GB) with both a sequential and concurrent solution. Given the file is 10 million rows, the sequential solution will be very slow, while the concurrent solution should take seconds.  The goal ultimately is to take the large file and aggregate the clicks on the module/presentation codes and date. 
+This project involves reading a very large dataset from the Open University Learning Analytics Dataset (OULAD) which is collected from students in online courses in the UK. The dataset used for this project is `studentVle.csv` which has over 10 million rows of data, containing module codes and presentation codes, the student and site IDs, as well as the date in days from assessment, and the sum total of clicks by a given student on that date. The tasks is to read this file (.5GB) with both a sequential and concurrent solution. Given the file is 10 million rows, the sequential solution will be very slow, while the concurrent solution should take seconds.  The goal ultimately is to take the large file and aggregate the clicks on the module/presentation codes and date. 
 
-The sequential solution design is very basic and linear, while the concurrent solution required the use of multiple producer/consumer pairs to concurrently read, parse, aggregate, fetch, and write to CSV file output. With the concurrent solution, we were asked to provide two version that output different files.  The first concurrent solution does the exact same thing as the sequential solution, which writes a different file (22 in total) for each unique combination of module and presentation codes. The second concurrent solution takes in a threshold value after the folder path that is used to filter the aggregated rows of data to days with clicks above the threshold. For example, if 10000 is passed as the second agrument, then all codes and days with clicks equal to or over 10000 will be written into a single CSV file.
+The sequential solution design is very basic and linear, while the concurrent solution required the use of multiple producer/consumer pairs to concurrently read, parse, aggregate, fetch, and write to CSV file output. With the concurrent solution, two versions are provided which output different files.  The first concurrent solution does the exact same thing as the sequential solution, which writes a different file (22 in total) for each unique combination of module and presentation codes. The second concurrent solution takes in a threshold value after the folder path that is used to filter the aggregated rows of data to days with clicks above the threshold. For example, if 10000 is passed as the second agrument, then all codes and days with clicks equal to or over 10000 will be written into a single CSV file.
 
 ## Setup
 
@@ -98,9 +98,9 @@ Closed the buffered writer!
 
 ## Assumptions and Edge Cases
 
-1) We assume that the user is passing a command line argument, and passing in a valid string path to a directory on their computer that stores the file `studentVle.csv`.
-2) We assume that the file has data in it, and that the columns are ordered such that the columns are {"module", "presentation", "student", "site", "date", "clicks"}.
-3) We handle a variety of edge cases in the normal producting execution of the application and in testing as well, e.g.:
+1) It is assumed that the user is passing a command line argument, and passing in a valid string path to a directory on their computer that stores the file `studentVle.csv`.
+2) It is assumed that the file has data in it, and that the columns are ordered such that the columns are {"module", "presentation", "student", "site", "date", "clicks"}.
+3) A variety of edge cases are handled in the normal producting execution of the application and in testing as well, e.g.:
  - When user doesn't provide a command line argument string
  - The folder path provided is invalid (aka does not exist on the computer)
  - The threshold argument value is non-numeric (needs to be an integer, or can be cast as one)
