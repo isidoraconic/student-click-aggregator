@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CSVRowWriterConsumer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assignment5</a> &gt; <a href="index.source.html" class="el_package">concurrentSolution</a> &gt; <span class="el_source">CSVRowWriterConsumer.java</span></div><h1>CSVRowWriterConsumer.java</h1><pre class="source lang-java linenums">package concurrentSolution;
+
+import java.io.IOException;
+import java.util.Objects;
+import java.util.concurrent.BlockingQueue;
+import org.apache.commons.csv.CSVPrinter;
+
+/**
+ * Class that represents a CSVRowWriterConsumer object.
+ * It takes a CSVRow object and writes it to an open output file. The consumer keeps a count of how
+ * many poison pills it should expect before it terminates (i.e. the total # of producers)
+ * When it reaches one, it will decrement the poisonCount, until we reach 0, at which point we terminate
+ */
+public class CSVRowWriterConsumer implements Runnable {
+
+  private BlockingQueue&lt;CSVRow&gt; queue;
+<span class="fc" id="L17">  private static final String[] OUTPUT_HEADER = {&quot;module_presentation&quot;, &quot;date&quot;, &quot;total_clicks&quot;};</span>
+  private final CSVRow POISON;
+  private CSVPrinter printer;
+  private int poisonCount;
+
+  /**
+   * Constructor for the CSVRowWriterConsumer class
+   * @param queue BlockingQueue from Driver that the CSVRow objects are stored in
+   * @param poison CSVRow poison pill that will kill each consumer thread
+   * @param printer The CSVPrinter object that the consumer uses to write
+   * @param poisonCount Total number of poison pills we should expect
+   */
+  public CSVRowWriterConsumer(BlockingQueue&lt;CSVRow&gt; queue,
+<span class="fc" id="L30">      CSVRow poison, CSVPrinter printer, int poisonCount)  {</span>
+
+<span class="fc" id="L32">    this.queue = queue;</span>
+<span class="fc" id="L33">    this.POISON = poison;</span>
+<span class="fc" id="L34">    this.printer = printer;</span>
+<span class="fc" id="L35">    this.poisonCount = poisonCount;</span>
+<span class="fc" id="L36">  }</span>
+
+  /**
+   * Method that takes a CSVPrinter object from its field, and prints the passed CSVRow object to the file
+   * @param row CSVRow object to write to file
+   * @throws IOException default IOException error
+   */
+  public void writeFile(CSVRow row) throws IOException {
+    try {
+<span class="fc" id="L45">      printer.printRecord(row.getCodeKey(), row.getDate(), row.getClicks());</span>
+<span class="nc" id="L46">    } catch (IOException e) {</span>
+<span class="nc" id="L47">      e.printStackTrace();</span>
+<span class="fc" id="L48">    }</span>
+
+<span class="fc" id="L50">  }</span>
+
+  /**
+   * Override of Runnable.run() method to take each CSVRow object from the BlockingQueue
+   * We call the writeFile method here as long as the queue has (valid) CSVFile objects
+   * When the Thread finds all the poison pills (depending on the poisonCount), it will terminate
+   * It decrements the poison count every time we encounter a poison pill, until we reach 0,
+   * at which point the thread terminates
+   */
+  @Override
+  public void run() {
+    try {
+      CSVRow row;
+<span class="fc bfc" id="L63" title="All 2 branches covered.">      while (poisonCount &gt; 0) {</span>
+<span class="fc" id="L64">        row = queue.take();</span>
+<span class="fc bfc" id="L65" title="All 2 branches covered.">        if(row.equals(this.POISON)) {</span>
+<span class="fc" id="L66">          poisonCount--;</span>
+        } else {
+<span class="fc" id="L68">          writeFile(row);</span>
+//          System.out.println(Thread.currentThread().getName() + &quot; taking row from BlockingQueue, codekey =  &quot; + row.getCodeKey() + &quot; and clicks = &quot; + row.getClicks());
+        }
+      }
+<span class="nc" id="L72">    } catch (InterruptedException | IOException interruptedException) {</span>
+<span class="nc" id="L73">      Thread.currentThread().interrupt();</span>
+<span class="nc" id="L74">      System.out.println(Thread.currentThread().getName() + &quot; was interrupted!&quot;);</span>
+<span class="fc" id="L75">    }</span>
+<span class="fc" id="L76">  }</span>
+
+  /**
+   * Override of default equals() method
+   * @param o object
+   * @return boolean
+   */
+  @Override
+  public boolean equals(Object o) {
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">    if (this == o) {</span>
+<span class="nc" id="L86">      return true;</span>
+    }
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">    if (!(o instanceof CSVRowWriterConsumer)) {</span>
+<span class="nc" id="L89">      return false;</span>
+    }
+<span class="fc" id="L91">    CSVRowWriterConsumer that = (CSVRowWriterConsumer) o;</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">    return poisonCount == that.poisonCount &amp;&amp;</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">        Objects.equals(queue, that.queue) &amp;&amp;</span>
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">        Objects.equals(POISON, that.POISON) &amp;&amp;</span>
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">        Objects.equals(printer, that.printer);</span>
+  }
+
+  /**
+   * Override of default hashCode() method
+   * @return int
+   */
+  @Override
+  public int hashCode() {
+<span class="fc" id="L104">    return Objects.hash(queue, POISON, printer, poisonCount);</span>
+  }
+
+  /**
+   * Override of default toString() method
+   * @return String
+   */
+  @Override
+  public String toString() {
+<span class="fc" id="L113">    return &quot;CSVRowWriterConsumer{&quot; +</span>
+        &quot;queue=&quot; + queue +
+        &quot;, POISON=&quot; + POISON +
+        &quot;, printer=&quot; + printer +
+        &quot;, poisonCount=&quot; + poisonCount +
+        '}';
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

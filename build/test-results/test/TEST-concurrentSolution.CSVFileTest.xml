@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="concurrentSolution.CSVFileTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2020-12-01T00:28:36" hostname="Isidoras-MacBook-Pro-2.local" time="0.003">
+  <properties/>
+  <testcase name="getFileContent" classname="concurrentSolution.CSVFileTest" time="0.001"/>
+  <testcase name="testEqualsFalse" classname="concurrentSolution.CSVFileTest" time="0.0"/>
+  <testcase name="addRow" classname="concurrentSolution.CSVFileTest" time="0.0"/>
+  <testcase name="testToString" classname="concurrentSolution.CSVFileTest" time="0.0"/>
+  <testcase name="testEqualsDiffObject" classname="concurrentSolution.CSVFileTest" time="0.0"/>
+  <testcase name="testEqualsTrue" classname="concurrentSolution.CSVFileTest" time="0.0"/>
+  <testcase name="getName" classname="concurrentSolution.CSVFileTest" time="0.0"/>
+  <testcase name="testHashCode" classname="concurrentSolution.CSVFileTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

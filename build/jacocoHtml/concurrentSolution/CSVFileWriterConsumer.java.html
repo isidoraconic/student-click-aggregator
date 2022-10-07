@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CSVFileWriterConsumer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assignment5</a> &gt; <a href="index.source.html" class="el_package">concurrentSolution</a> &gt; <span class="el_source">CSVFileWriterConsumer.java</span></div><h1>CSVFileWriterConsumer.java</h1><pre class="source lang-java linenums">package concurrentSolution;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Objects;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import sequentialSolution.NoSuchDirectoryException;
+
+/**\
+ * Class to represent the consumers that will write the output files
+ * The consumer takes a CSVFile object from the queue that was enqueued by the CSVFileProducer class
+ * instances (producers), and writes that .csv file to the specified output directory
+ */
+<span class="nc bnc" id="L19" title="All 2 branches missed.">public class CSVFileWriterConsumer implements Runnable {</span>
+
+  private BlockingQueue&lt;CSVFile&gt; queue;
+  private String outputDir;
+<span class="nc" id="L23">  private static final String[] OUTPUT_HEADER = {&quot;date&quot;, &quot;total_clicks&quot;};</span>
+  private final CSVFile POISON;
+
+  /**
+   * Constructor for the CSVFileWriterConsumer class
+   * @param outputDir output directory to store all the .csv files in
+   * @param queue BlockingQueue from Driver that the CSVFile objects are stored in
+   * @param poison CSVFile poison pill that will kill each consumer thread
+   * @throws NoSuchDirectoryException custom exception when directory does not exist
+   */
+  public CSVFileWriterConsumer(String outputDir, BlockingQueue&lt;CSVFile&gt; queue,
+<span class="nc" id="L34">                               CSVFile poison) throws NoSuchDirectoryException {</span>
+    //Check if the output directory exists, if not, throw NoSuchDirectoryException
+<span class="nc bnc" id="L36" title="All 2 branches missed.">    if (!(new File(outputDir).exists())) {</span>
+<span class="nc" id="L37">      throw new NoSuchDirectoryException(&quot;The specified directory does not exist. &quot;</span>
+              + &quot;Please enter an existing directory.&quot;);
+    } else {
+<span class="nc" id="L40">      this.outputDir = outputDir;</span>
+    }
+<span class="nc" id="L42">    this.queue = queue;</span>
+<span class="nc" id="L43">    this.POISON = poison;</span>
+<span class="nc" id="L44">  }</span>
+
+  /**
+   * Method that takes in a CSVFile object and writes a csv. file using the information stored in it
+   * @param fileContent CSVFile object to write to a csv. file
+   * @throws IOException default IOException error
+   */
+  public void writeFile(CSVFile fileContent) throws IOException {
+
+    FileWriter fileWriter;
+<span class="nc" id="L54">    BufferedWriter bufferedWriter = null;</span>
+    CSVPrinter csvPrinter;
+
+    try {
+<span class="nc" id="L58">      fileWriter = new FileWriter(this.outputDir + &quot;/&quot; + fileContent.getName() + &quot;.csv&quot;);</span>
+<span class="nc" id="L59">      bufferedWriter = new BufferedWriter(fileWriter);</span>
+<span class="nc" id="L60">      csvPrinter = new CSVPrinter(bufferedWriter, CSVFormat.DEFAULT.withHeader(OUTPUT_HEADER));</span>
+
+<span class="nc bnc" id="L62" title="All 2 branches missed.">      for (CopyOnWriteArrayList&lt;String&gt; row : fileContent.getFileContent()) {</span>
+<span class="nc" id="L63">        csvPrinter.printRecord(row.get(0), row.get(1));</span>
+<span class="nc" id="L64">      }</span>
+
+<span class="nc" id="L66">    } catch (IOException e) {</span>
+<span class="nc" id="L67">      e.printStackTrace();</span>
+    } finally {
+      try {
+<span class="nc bnc" id="L70" title="All 4 branches missed.">        assert bufferedWriter != null;</span>
+<span class="nc" id="L71">        bufferedWriter.close();</span>
+<span class="nc" id="L72">      } catch (IOException e) {</span>
+<span class="nc" id="L73">        e.printStackTrace();</span>
+<span class="nc" id="L74">      }</span>
+    }
+<span class="nc" id="L76">  }</span>
+
+  /**
+   * Override of Runnable.run() method to take each CSVFile object from the BlockingQueue
+   * We call the writeFile method here as long as the queue has (valid) CSVFile objects
+   * When the Thread finds a poison pill, it will terminate
+   */
+  @Override
+  public void run() {
+    try {
+      CSVFile outputFile;
+<span class="nc bnc" id="L87" title="All 2 branches missed.">      while (!(outputFile = queue.take()).equals(POISON)) {</span>
+//        System.out.println(Thread.currentThread().getName() + &quot; taking &quot; + outputFile.getName() + &quot; from BlockingQueue&quot;);
+<span class="nc" id="L89">        writeFile(outputFile);</span>
+      }
+<span class="nc" id="L91">    } catch (InterruptedException | IOException interruptedException) {</span>
+<span class="nc" id="L92">        Thread.currentThread().interrupt();</span>
+<span class="nc" id="L93">    }</span>
+<span class="nc" id="L94">  }</span>
+
+  /**
+   * Override of default equals() method
+   * @param o object
+   * @return boolean
+   */
+  @Override
+  public boolean equals(Object o) {
+<span class="nc bnc" id="L103" title="All 2 branches missed.">    if (this == o) {</span>
+<span class="nc" id="L104">      return true;</span>
+    }
+<span class="nc bnc" id="L106" title="All 2 branches missed.">    if (!(o instanceof CSVFileWriterConsumer)) {</span>
+<span class="nc" id="L107">      return false;</span>
+    }
+<span class="nc" id="L109">    CSVFileWriterConsumer that = (CSVFileWriterConsumer) o;</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">    return queue.equals(that.queue) &amp;&amp;</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">        outputDir.equals(that.outputDir) &amp;&amp;</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        POISON.equals(that.POISON);</span>
+  }
+
+  /**
+   * Override of default hashCode() method
+   * @return int
+   */
+  @Override
+  public int hashCode() {
+<span class="nc" id="L121">    return Objects.hash(queue, outputDir, POISON);</span>
+  }
+
+  /**
+   * Override of default toString() method
+   * @return String
+   */
+  @Override
+  public String toString() {
+<span class="nc" id="L130">    return &quot;CSVFileWriterConsumer{&quot; +</span>
+        &quot;queue=&quot; + queue +
+        &quot;, outputDir='&quot; + outputDir + '\'' +
+        &quot;, POISON=&quot; + POISON +
+        '}';
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HashMapProducer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assignment5</a> &gt; <a href="index.source.html" class="el_package">concurrentSolution</a> &gt; <span class="el_source">HashMapProducer.java</span></div><h1>HashMapProducer.java</h1><pre class="source lang-java linenums">package concurrentSolution;
+
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
+import sun.jvm.hotspot.opto.Block;
+
+public class HashMapProducer implements Runnable {
+
+  private BlockingQueue&lt;CSVFile&gt; queue; //= new LinkedBlockingQueue&lt;&gt;();
+  private ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; map;
+  private final CSVFile POISON;
+
+  public HashMapProducer(BlockingQueue&lt;CSVFile&gt; queue,
+<span class="nc" id="L18">      CSVFile poisonPill, ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; map) {</span>
+<span class="nc" id="L19">    this.queue = queue;</span>
+<span class="nc" id="L20">    this.POISON = poisonPill;</span>
+<span class="nc" id="L21">    this.map = map;</span>
+<span class="nc" id="L22">  }</span>
+
+  /*
+  public void getMapElement() throws InterruptedException {
+    for(Map.Entry outerKey : this.map.entrySet()) {
+
+      ConcurrentHashMap&lt;String, Integer&gt; innerMap = this.map.remove(outerKey);
+
+      StringBuilder sb1 = new StringBuilder();
+      sb1.append(outerKey);
+      String codeKey = sb1.toString();
+
+      for(Map.Entry innerKey : this.map.get(outerKey).entrySet()) {
+
+        StringBuilder sb2 = new StringBuilder();
+        sb2.append(innerKey);
+        String date = sb2.toString();
+        sb2 = new StringBuilder();
+        sb2.append(this.map.get(outerKey).get(innerKey));
+        Integer clicks = Integer.valueOf(sb2.toString());
+
+        //InboundCSVRow(String module, String presentation, Integer student, Integer site, String date, Integer clicks)
+        InboundCSVRow row = new InboundCSVRow(&quot;module&quot;, &quot;presentation&quot;,
+            Integer.MIN_VALUE, Integer.MIN_VALUE, date, clicks);
+        row.setCodeKey(codeKey);
+        this.queue.add(row);
+      }
+
+      //break;
+      //Should I break here? I.e. only does one element at a time?
+      //Will this essentially block every single thread other than one from doing this bc it is
+      //a concurrent hashmap?
+    }
+  }
+   */
+
+  public void getMapElement() throws InterruptedException {
+<span class="nc bnc" id="L59" title="All 2 branches missed.">    for(Map.Entry outerKey : this.map.entrySet()) {</span>
+
+<span class="nc" id="L61">      ConcurrentHashMap&lt;String, Integer&gt; innerMap = this.map.remove(outerKey);</span>
+
+<span class="nc" id="L63">      StringBuilder sb1 = new StringBuilder();</span>
+<span class="nc" id="L64">      sb1.append(outerKey);</span>
+<span class="nc" id="L65">      String codeKey = sb1.toString();</span>
+<span class="nc" id="L66">      CSVFile outputFile = new CSVFile(codeKey);</span>
+
+<span class="nc bnc" id="L68" title="All 2 branches missed.">      for(Map.Entry innerKey : this.map.get(outerKey).entrySet()) {</span>
+<span class="nc" id="L69">        CopyOnWriteArrayList&lt;String&gt; row = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L70">        StringBuilder sb2 = new StringBuilder();</span>
+<span class="nc" id="L71">        sb2.append(innerKey);</span>
+<span class="nc" id="L72">        String date = sb2.toString();</span>
+<span class="nc" id="L73">        sb2 = new StringBuilder();</span>
+<span class="nc" id="L74">        sb2.append(this.map.get(outerKey).get(innerKey));</span>
+<span class="nc" id="L75">        String clicks = sb2.toString();</span>
+<span class="nc" id="L76">        row.add(date);</span>
+<span class="nc" id="L77">        row.add(clicks);</span>
+<span class="nc" id="L78">        outputFile.addRow(row);</span>
+<span class="nc" id="L79">      }</span>
+<span class="nc" id="L80">      this.queue.add(outputFile);</span>
+
+      //break;
+      //Should I break here? I.e. only does one element at a time?
+      //Will this essentially block every single thread other than one from doing this bc it is
+      //a concurrent hashmap?
+<span class="nc" id="L86">    }</span>
+<span class="nc" id="L87">  }</span>
+
+  @Override
+  public void run() {
+
+    try {
+<span class="nc" id="L93">      getMapElement();</span>
+<span class="nc" id="L94">    } catch (InterruptedException e) {</span>
+<span class="nc" id="L95">      Thread.currentThread().interrupt();</span>
+    } finally {
+      while(true) {
+        try {
+<span class="nc" id="L99">          this.queue.put(this.POISON);</span>
+<span class="nc" id="L100">          break;</span>
+<span class="nc" id="L101">        } catch (InterruptedException e) {</span>
+<span class="nc" id="L102">          e.printStackTrace();</span>
+<span class="nc" id="L103">        }</span>
+        //break;
+      }
+    }
+<span class="nc" id="L107">  }</span>
+
+  public static void main(String[] args) {
+
+<span class="nc" id="L111">    ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; map = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="nc" id="L112">    ConcurrentHashMap&lt;String, Integer&gt; a = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="nc" id="L113">    ConcurrentHashMap&lt;String, Integer&gt; c = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="nc" id="L114">    ConcurrentHashMap&lt;String, Integer&gt; f = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="nc" id="L115">    map.put(&quot;AAA_2014J.csv&quot;, a);</span>
+<span class="nc" id="L116">    map.put(&quot;CCC_2014J.csv&quot;, c);</span>
+<span class="nc" id="L117">    map.put(&quot;FFF_2014J.csv&quot;, f);</span>
+<span class="nc" id="L118">    a.put(&quot;95&quot;, 2);</span>
+<span class="nc" id="L119">    c.put(&quot;239&quot;, 5);</span>
+<span class="nc" id="L120">    c.put(&quot;240&quot;, 1);</span>
+<span class="nc" id="L121">    f.put(&quot;227&quot;, 11);</span>
+<span class="nc" id="L122">    f.put(&quot;90&quot;, 19);</span>
+
+<span class="nc" id="L124">  }</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

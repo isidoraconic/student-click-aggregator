@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CSVFile.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assignment5</a> &gt; <a href="index.source.html" class="el_package">concurrentSolution</a> &gt; <span class="el_source">CSVFile.java</span></div><h1>CSVFile.java</h1><pre class="source lang-java linenums">package concurrentSolution;
+
+import java.util.Objects;
+import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class CSVFile {
+
+<span class="nc" id="L9">  private CopyOnWriteArrayList&lt;CopyOnWriteArrayList&lt;String&gt;&gt; rows = new CopyOnWriteArrayList();</span>
+  private String name;
+
+<span class="nc" id="L12">  public CSVFile(String name) {</span>
+<span class="nc" id="L13">    this.name = name + &quot;.csv&quot;;</span>
+<span class="nc" id="L14">    Random r = new Random();</span>
+<span class="nc" id="L15">  }</span>
+
+  public void addRow(CopyOnWriteArrayList&lt;String&gt; row) {
+<span class="nc" id="L18">    this.rows.add(row);</span>
+<span class="nc" id="L19">  }</span>
+
+  public CopyOnWriteArrayList&lt;CopyOnWriteArrayList&lt;String&gt;&gt; getFileContent() {
+<span class="nc" id="L22">    return this.rows;</span>
+  }
+
+  public String getName() {
+<span class="nc" id="L26">    return this.name;</span>
+  }
+
+  @Override
+  public boolean equals(Object o) {
+<span class="nc bnc" id="L31" title="All 2 branches missed.">    if (this == o) {</span>
+<span class="nc" id="L32">      return true;</span>
+    }
+<span class="nc bnc" id="L34" title="All 2 branches missed.">    if (!(o instanceof CSVFile)) {</span>
+<span class="nc" id="L35">      return false;</span>
+    }
+<span class="nc" id="L37">    CSVFile csvFile = (CSVFile) o;</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">    return Objects.equals(rows, csvFile.rows) &amp;&amp;</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">        Objects.equals(name, csvFile.name);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L44">    return Objects.hash(rows, name);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L49">    return &quot;CSVFile{&quot; +</span>
+        &quot;name='&quot; + name + '\'' +
+        '}';
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

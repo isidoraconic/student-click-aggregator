@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CSVReader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assignment5</a> &gt; <a href="index.source.html" class="el_package">sequentialSolution</a> &gt; <span class="el_source">CSVReader.java</span></div><h1>CSVReader.java</h1><pre class="source lang-java linenums">package sequentialSolution;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Objects;
+
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+
+/**
+ * Class to represent a CSV reader object encapsulating the commons-csv library
+ * Inputs a string path to the student clicks csv file, and then outputs a hashmap of click aggregations
+ * Downstream the CSV writer will take the hashmap and write unique keys to different files
+ */
+public class CSVReader {
+
+<span class="nc" id="L21">    private static final String[] STUDENT_HEADERS = {&quot;module&quot;, &quot;presentation&quot;, &quot;student&quot;, &quot;site&quot;, &quot;date&quot;, &quot;clicks&quot;};</span>
+    private static final String MODULE_HEADER = &quot;module&quot;;
+    private static final String PRESENTATION_HEADER = &quot;presentation&quot;;
+    private static final String DATE_HEADER = &quot;date&quot;;
+    private static final String CLICKS_HEADER = &quot;clicks&quot;;
+    private static final String STUDENT_CLICKS = &quot;studentVle.csv&quot;;
+    private static final String STUDENT_CLICKS_TEST = &quot;studentVle_sample.csv&quot;;
+    private String csvFile;
+    private String folderPath;
+
+    /**
+     * Constructor method for sequentialSolution.CSVReader object
+     * @param csvFolder String path to folder containing CSV files
+     * @param mode String mode switch for test or production of code
+     * @throws NoSuchDirectoryException custom NoSuchDirectoryException error
+     */
+<span class="nc" id="L37">    public CSVReader(String csvFolder, String mode) throws NoSuchDirectoryException {</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">        if (!(new File(csvFolder).exists())) {</span>
+<span class="nc" id="L39">            throw new NoSuchDirectoryException(&quot;The specified folder path does not exist. &quot;</span>
+                    + &quot;Please enter a valid folder path.&quot;);
+        } else {
+<span class="nc" id="L42">            this.folderPath = csvFolder;</span>
+<span class="nc bnc" id="L43" title="All 2 branches missed.">            if (mode.equals(&quot;test&quot;)) {</span>
+<span class="nc" id="L44">                this.csvFile = csvFolder + &quot;/&quot; + STUDENT_CLICKS_TEST;</span>
+<span class="nc bnc" id="L45" title="All 2 branches missed.">            } else if (mode.equals(&quot;prod&quot;)) {</span>
+<span class="nc" id="L46">                this.csvFile = csvFolder + &quot;/&quot; + STUDENT_CLICKS;</span>
+            }
+        }
+<span class="nc" id="L49">        System.out.println(&quot;The CSV file is: &quot; + this.csvFile);</span>
+<span class="nc" id="L50">    }</span>
+
+    /**
+     * Method to get the folder path passed as command line argument
+     * @return String folder path where CSV files are located
+     */
+<span class="nc" id="L56">    public String getFolderPath() { return this.folderPath; }</span>
+
+    /**
+     * Method to get the full concatenated string file path
+     * @return String full path to CSV file for reading
+     */
+<span class="nc" id="L62">    public String getFilePath() { return this.csvFile; }</span>
+
+    /**
+     * Method that reads the CSV file and returns a data object containing the key lookup for clicks aggregated on module, presentation and date
+     * The method creates the data hashmap object, and loops through the rows of the parsed CSV file
+     * For each row, it looks in the hashmap for module + presentation key
+     * If the key is found it looks in the nested hashmap for date key
+     * If the key is found, it adds the clicks together for new total
+     * Else it adds a new entry to the nested hashmap
+     * Lastly if the concat string key is not found, it adds an entirely new entry
+     * @return HashMap with String key and HashMap of value with Integers as key and value for date and sum clicks
+     * @throws IOException default IOException error
+     * @throws IllegalArgumentException default IllegalArgumentException error
+     */
+    public HashMap&lt;String, HashMap&lt;String, Integer&gt;&gt; readCSVFile() throws IOException, IllegalArgumentException {
+//        Reader reader = Files.newBufferedReader(Paths.get(SAMPLE_CSV_FILE_PATH));
+//        CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT
+<span class="nc" id="L79">        Reader csvReader = Files.newBufferedReader(Paths.get(this.csvFile));</span>
+<span class="nc" id="L80">        CSVParser csvParser = new CSVParser(csvReader, CSVFormat.DEFAULT</span>
+<span class="nc" id="L81">                .withFirstRecordAsHeader()</span>
+<span class="nc" id="L82">                .withHeader(STUDENT_HEADERS)</span>
+//                .withIgnoreHeaderCase()
+                );
+<span class="nc" id="L85">        HashMap&lt;String, HashMap&lt;String, Integer&gt;&gt; aggStudentData = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        for (CSVRecord record : csvParser) {</span>
+<span class="nc" id="L87">            String module = record.get(MODULE_HEADER);</span>
+//            System.out.println(&quot;module = &quot;+module);
+<span class="nc" id="L89">            String presentation = record.get(PRESENTATION_HEADER);</span>
+<span class="nc" id="L90">            String codeKey = module + &quot;_&quot; + presentation;</span>
+//            System.out.println(&quot;The codekey is: &quot; + codeKey);
+<span class="nc" id="L92">            String date = record.get(DATE_HEADER);</span>
+<span class="nc" id="L93">            int clicks = Integer.parseInt(record.get(CLICKS_HEADER));</span>
+
+            // module and presentation code exists in HashMap
+<span class="nc bnc" id="L96" title="All 2 branches missed.">            if (aggStudentData.containsKey(codeKey)) {</span>
+                // date exists in HashMap
+<span class="nc bnc" id="L98" title="All 2 branches missed.">                if (aggStudentData.get(codeKey).containsKey(date)) {</span>
+<span class="nc" id="L99">                    Integer storedClicks = aggStudentData.get(codeKey).get(date);</span>
+<span class="nc" id="L100">                    Integer newClicks = storedClicks + clicks;</span>
+<span class="nc" id="L101">                    aggStudentData.get(codeKey).put(date, newClicks);</span>
+<span class="nc" id="L102">                } else { //date does not exist in HashMap</span>
+<span class="nc" id="L103">                    aggStudentData.get(codeKey).put(date, clicks);</span>
+                }
+            } else { // module and presentation code don't exist in HashMap
+<span class="nc" id="L106">                aggStudentData.put(codeKey, new HashMap&lt;String, Integer&gt;());</span>
+<span class="nc" id="L107">                aggStudentData.get(codeKey).put(date, clicks);</span>
+            }
+<span class="nc" id="L109">        }</span>
+<span class="nc" id="L110">        return aggStudentData;</span>
+    }
+
+    /**
+     * Override method for default equals()
+     * @param o class object for sequentialSolution.CSVReader
+     * @return boolean
+     */
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        if (this == o) return true;</span>
+<span class="nc bnc" id="L121" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="nc" id="L122">        CSVReader csvReader = (CSVReader) o;</span>
+<span class="nc" id="L123">        return Objects.equals(csvFile, csvReader.csvFile);</span>
+    }
+
+    /**
+     * Override method for default hashCode()
+     * @return int
+     */
+    @Override
+    public int hashCode() {
+<span class="nc" id="L132">        return Objects.hash(csvFile);</span>
+    }
+
+    /**
+     * Override method for default toString()
+     * @return String
+     */
+    @Override
+    public String toString() {
+<span class="nc" id="L141">        return &quot;sequentialSolution.CSVReader{&quot; +</span>
+<span class="nc" id="L142">                &quot;STUDENT_HEADERS=&quot; + Arrays.toString(STUDENT_HEADERS) +</span>
+                &quot;, csvFile='&quot; + csvFile + '\'' +
+                '}';
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

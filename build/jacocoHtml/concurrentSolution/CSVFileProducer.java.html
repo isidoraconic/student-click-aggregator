@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CSVFileProducer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assignment5</a> &gt; <a href="index.source.html" class="el_package">concurrentSolution</a> &gt; <span class="el_source">CSVFileProducer.java</span></div><h1>CSVFileProducer.java</h1><pre class="source lang-java linenums">package concurrentSolution;
+
+import java.util.Objects;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+/**
+ * Class to represent the CSVFileProducer
+ * This producer (thread) will read from the HashMap of information (information parsed from the
+ * studentVle.csv file) and create a CSVFile object for each one of the outer HashMap entries
+ * These CSVFile objects will be passed to the consumers which will write the .csv files
+ */
+public class CSVFileProducer implements Runnable {
+
+  private BlockingQueue&lt;CSVFile&gt; queue;
+  private ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; map;
+  private CopyOnWriteArrayList&lt;String&gt; keyList;
+  private final CSVFile POISON;
+  private final int N_POISON_PER_PRODUCER;
+
+  /**
+   * Constructor for the CSVFileProducer
+   * Note that the key list is a thread safe ArrayList of all the keys in the HashMap
+   * @param queue BlockingQueue from Driver that the CSVFile objects will be stored in
+   * @param poison CSVFile poison pill that will kill each consumer thread
+   * @param map thread safe HashMap containing all the parsed info from studentVle.csv
+   * @param N_POISON_PER_PRODUCER number of poison pills per producer
+   * @param keyList list of keys from the map (HashMap of studentVle.csv info)
+   */
+  public CSVFileProducer(BlockingQueue&lt;CSVFile&gt; queue,
+                         CSVFile poison, ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; map,
+<span class="nc" id="L33">                         int N_POISON_PER_PRODUCER, CopyOnWriteArrayList&lt;String&gt; keyList) {</span>
+<span class="nc" id="L34">    this.queue = queue;</span>
+<span class="nc" id="L35">    this.POISON = poison;</span>
+<span class="nc" id="L36">    this.map = map;</span>
+<span class="nc" id="L37">    this.N_POISON_PER_PRODUCER = N_POISON_PER_PRODUCER;</span>
+<span class="nc" id="L38">    this.keyList = keyList;</span>
+<span class="nc" id="L39">  }</span>
+
+  /**
+   * Method that takes the top element in the list of keys, and then extracts those nested
+   * HashMaps from the HashMap containing the parsed studentVle.csv info
+   * @return CSVFile object with all the information from those nested HashMaps
+   * @throws InterruptedException default InterruptedException error for Thread interruption
+   */
+  public synchronized CSVFile getMapElement() throws InterruptedException {
+<span class="nc" id="L48">    String key = keyList.remove(0);</span>
+<span class="nc" id="L49">    ConcurrentHashMap&lt;String, Integer&gt; innerMap = this.map.remove(key);</span>
+<span class="nc" id="L50">    CSVFile outputFile = new CSVFile(key);</span>
+
+<span class="nc bnc" id="L52" title="All 2 branches missed.">    for(String innerKey : innerMap.keySet()) {</span>
+<span class="nc" id="L53">      CopyOnWriteArrayList&lt;String&gt; row = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L54">      String date = innerKey;</span>
+<span class="nc" id="L55">      String clicks = &quot;&quot; + innerMap.get(date);</span>
+<span class="nc" id="L56">      row.add(date);</span>
+<span class="nc" id="L57">      row.add(clicks);</span>
+<span class="nc" id="L58">      outputFile.addRow(row);</span>
+<span class="nc" id="L59">    }</span>
+
+<span class="nc" id="L61">    return  outputFile;</span>
+
+  }
+
+  /**
+   * Override of Runnable.run() method to take each key and alll nested HashMaps, creates the CSVFile
+   * objects for each one, and puts them into the blocking queue for the consumers
+   * At the end when there is nothing else to read, it stashes a poison pill for each consumer
+   */
+  @Override
+  public void run() {
+    try {
+      CSVFile fileInfo;
+<span class="nc bnc" id="L74" title="All 4 branches missed.">      while(!map.isEmpty() &amp;&amp; !keyList.isEmpty()) {</span>
+<span class="nc" id="L75">        fileInfo = getMapElement();</span>
+<span class="nc" id="L76">        queue.put(fileInfo);</span>
+//        System.out.println(Thread.currentThread().getName() + &quot; just added CSVFile = &quot; + fileInfo.getName() + &quot; to the BlockingQueue.&quot;);
+      }
+<span class="nc" id="L79">    } catch (InterruptedException e) {</span>
+<span class="nc" id="L80">        Thread.currentThread().interrupt();</span>
+    } finally {
+      while(true) {
+        try {
+<span class="nc bnc" id="L84" title="All 2 branches missed.">          for (int i=0; i &lt; this.N_POISON_PER_PRODUCER; i++) {</span>
+//            System.out.println(Thread.currentThread().getName() + &quot; adding poison pill to queue in WriterProducer!&quot;);
+<span class="nc" id="L86">            queue.put(this.POISON);</span>
+          }
+<span class="nc" id="L88">          break;</span>
+<span class="nc" id="L89">        } catch (InterruptedException e) {</span>
+<span class="nc" id="L90">          e.printStackTrace();</span>
+<span class="nc" id="L91">        }</span>
+      }
+    }
+<span class="nc" id="L94">  }</span>
+
+  /**
+   * Override of default equals() method
+   * @param o object
+   * @return boolean
+   */
+  @Override
+  public boolean equals(Object o) {
+<span class="nc bnc" id="L103" title="All 2 branches missed.">    if (this == o) {</span>
+<span class="nc" id="L104">      return true;</span>
+    }
+<span class="nc bnc" id="L106" title="All 2 branches missed.">    if (!(o instanceof CSVFileProducer)) {</span>
+<span class="nc" id="L107">      return false;</span>
+    }
+<span class="nc" id="L109">    CSVFileProducer that = (CSVFileProducer) o;</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">    return N_POISON_PER_PRODUCER == that.N_POISON_PER_PRODUCER &amp;&amp;</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">        queue.equals(that.queue) &amp;&amp;</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        map.equals(that.map) &amp;&amp;</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">        keyList.equals(that.keyList) &amp;&amp;</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">        POISON.equals(that.POISON);</span>
+  }
+
+  /**
+   * Override of default hashCode() method
+   * @return int
+   */
+  @Override
+  public int hashCode() {
+<span class="nc" id="L123">    return Objects.hash(queue, map, keyList, POISON, N_POISON_PER_PRODUCER);</span>
+  }
+
+  /**
+   * Override of default toString() method
+   * @return String
+   */
+  @Override
+  public String toString() {
+<span class="nc" id="L132">    return &quot;CSVFileProducer{&quot; +</span>
+        &quot;queue=&quot; + queue +
+        &quot;, map=&quot; + map +
+        &quot;, keyList=&quot; + keyList +
+        &quot;, POISON=&quot; + POISON +
+        &quot;, N_POISON_PER_PRODUCER=&quot; + N_POISON_PER_PRODUCER +
+        '}';
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

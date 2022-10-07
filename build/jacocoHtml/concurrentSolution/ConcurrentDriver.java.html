@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConcurrentDriver.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assignment5</a> &gt; <a href="index.source.html" class="el_package">concurrentSolution</a> &gt; <span class="el_source">ConcurrentDriver.java</span></div><h1>ConcurrentDriver.java</h1><pre class="source lang-java linenums">package concurrentSolution;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import java.util.concurrent.CountDownLatch;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import sequentialSolution.NoSuchDirectoryException;
+import sequentialSolution.NullCommandLineArgument;
+
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+
+/**
+ * Class to represent the primary driver of the concurrent solution
+ * Drives the instantiation of multiple producer and consumer threads for both reading and writing CSV files
+ */
+<span class="nc bnc" id="L22" title="All 2 branches missed.">public class ConcurrentDriver {</span>
+
+<span class="nc" id="L24">    private static final CSVRow readerPoison = new CSVRow(&quot;thread&quot;, &quot;killer&quot;, 0, 0, &quot;&quot;, 0);</span>
+<span class="nc" id="L25">    private static final CSVFile writerFilePoison = new CSVFile(&quot;poison&quot;);</span>
+<span class="nc" id="L26">    private static final CSVRow writerRowPoison = new CSVRow(&quot;poison&quot;, &quot;&quot;, 0);</span>
+<span class="nc" id="L27">    private static final String[] THRESHOLD_OUTPUT_HEADER = {&quot;module_presentation&quot;, &quot;date&quot;, &quot;total_clicks&quot;};</span>
+    private static final int QUEUE_BOUND = 10;
+    private static final int N_PRODUCERS = 2;
+    private static final int N_CONSUMERS = 3; //Runtime.getRuntime().availableProcessors();
+    private static final int N_POISON_PER_PRODUCER = N_CONSUMERS / N_PRODUCERS;
+    private static final int N_POISON_PILL_REMAIN = N_CONSUMERS % N_PRODUCERS;
+
+    /**
+     * Main method that will drive the producer-consumer design pattern for concurrent operation of CSV read/write
+     * @param args String array of arguments passed in command line
+     * @throws NoSuchDirectoryException custom exception error when no directory found
+     * @throws InterruptedException default InterruptedException error for Threads
+     * @throws NullCommandLineArgument custom exception error when the command line args are null
+     * @throws InvalidThresholdValue custom exception error when the threshold value is not numeric
+     * @throws IOException default IOException error
+     */
+    public static void main(String[] args)
+        throws NoSuchDirectoryException, InterruptedException, NullCommandLineArgument, InvalidThresholdValue, IOException {
+
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        if (args.length &lt; 1) {</span>
+<span class="nc" id="L47">            throw new NullCommandLineArgument(&quot;The command line argument was null/empty. Please provide a valid folder path to CSV data.&quot;);</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        } else if (args.length == 1) {</span>
+<span class="nc" id="L49">            String cliPath = args[0];</span>
+<span class="nc" id="L50">            ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; aggStudentData = readStudentData(cliPath);</span>
+<span class="nc" id="L51">            writeMultipleFiles(cliPath, aggStudentData);</span>
+<span class="nc" id="L52">        } else {</span>
+            try {
+<span class="nc" id="L54">                String cliPath = args[0];</span>
+<span class="nc" id="L55">                Integer threshold = Integer.parseInt(args[1]); // need to check data type or throw error</span>
+<span class="nc" id="L56">                ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; aggStudentData = readStudentData(cliPath);</span>
+<span class="nc" id="L57">                writeSingleThresholdFile(cliPath, threshold, aggStudentData);</span>
+<span class="nc" id="L58">            } catch (NumberFormatException | IOException e) {</span>
+<span class="nc" id="L59">                throw new InvalidThresholdValue(&quot;Threshold value provided was not a valid integer. Please rerun program with integer value for the threshold parameter.&quot;);</span>
+<span class="nc" id="L60">            }</span>
+        }
+
+<span class="nc" id="L63">    }</span>
+
+    public static ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; readStudentData(String path) throws NoSuchDirectoryException, InterruptedException {
+<span class="nc" id="L66">        BlockingQueue&lt;CSVRow&gt; readerQueue = new LinkedBlockingQueue&lt;CSVRow&gt;(QUEUE_BOUND);</span>
+<span class="nc" id="L67">        ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; aggStudentData = new ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt;();</span>
+
+        // reader threads go here
+<span class="nc" id="L70">        Thread producer = new Thread(new CSVReaderProducer(path, &quot;prod&quot;, readerQueue, readerPoison, N_CONSUMERS));</span>
+<span class="nc" id="L71">        producer.start();</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        for (int i = 0; i &lt; N_CONSUMERS; i++) {</span>
+<span class="nc" id="L73">            new Thread(new ClickAggregatorConsumer(readerQueue, aggStudentData, readerPoison)).start();</span>
+        }
+
+        // sleep between CSV reader and writer Thread workflows
+<span class="nc" id="L77">        producer.join();</span>
+
+//        System.out.println(&quot;Student data has &quot; + aggStudentData.size() + &quot; keys&quot;);
+
+<span class="nc" id="L81">        return aggStudentData;</span>
+    }
+
+    public static void writeMultipleFiles(String path, ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; studentData) throws NoSuchDirectoryException {
+<span class="nc" id="L85">        BlockingQueue&lt;CSVFile&gt; writerQueue = new LinkedBlockingQueue&lt;CSVFile&gt;(QUEUE_BOUND);</span>
+
+        //List of keys for the writer producer and consumer to use
+<span class="nc" id="L88">        CopyOnWriteArrayList&lt;String&gt; keyList = new CopyOnWriteArrayList&lt;&gt;(studentData.keySet());</span>
+
+        //Writer threads go here
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        for(int i = 0; i &lt; N_PRODUCERS; i++) {</span>
+<span class="nc" id="L92">            new Thread(new CSVFileProducer(writerQueue, writerFilePoison, studentData, N_CONSUMERS, keyList)).start();</span>
+        }
+
+<span class="nc bnc" id="L95" title="All 2 branches missed.">        for(int j = 0; j &lt; N_CONSUMERS; j++) {</span>
+<span class="nc" id="L96">            new Thread(new CSVFileWriterConsumer(path, writerQueue, writerFilePoison)).start();</span>
+        }
+<span class="nc" id="L98">    }</span>
+
+    public static void writeSingleThresholdFile(String path, Integer threshold, ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Integer&gt;&gt; studentData)
+            throws IOException, InterruptedException {
+<span class="nc" id="L102">        BlockingQueue&lt;CSVRow&gt; writerQueue = new LinkedBlockingQueue&lt;CSVRow&gt;(QUEUE_BOUND);</span>
+
+        //List of keys for the writer producer and consumer to use
+<span class="nc" id="L105">        CopyOnWriteArrayList&lt;String&gt; keyList = new CopyOnWriteArrayList&lt;&gt;(studentData.keySet());</span>
+
+        //Multiple producers
+//        System.out.println(&quot;Student data has &quot; + studentData.size() + &quot; keys&quot;);
+<span class="nc bnc" id="L109" title="All 2 branches missed.">        for(int i = 0; i &lt; N_PRODUCERS; i++) {</span>
+<span class="nc" id="L110">            new Thread(new CSVRowProducer(writerQueue, writerRowPoison, studentData, 1, keyList, threshold)).start();</span>
+        }
+
+        //Making the file so that the producers can write to it
+        FileWriter fileWriter;
+<span class="nc" id="L115">        BufferedWriter bufferedWriter = null;</span>
+        CSVPrinter csvPrinter;
+
+        //Creating the empty csv file with the appropriate header
+        try {
+<span class="nc" id="L120">            fileWriter = new FileWriter(path + &quot;/&quot; + &quot;activity-&quot; + threshold + &quot;.csv&quot;);</span>
+<span class="nc" id="L121">            bufferedWriter = new BufferedWriter(fileWriter);</span>
+<span class="nc" id="L122">            csvPrinter = new CSVPrinter(bufferedWriter, CSVFormat.DEFAULT.withHeader(THRESHOLD_OUTPUT_HEADER));</span>
+<span class="nc" id="L123">        } catch (IOException e) {</span>
+<span class="nc" id="L124">            e.printStackTrace();</span>
+<span class="nc" id="L125">        }</span>
+
+        //Pass the csvPrinter object to the thread so that we dont need to keep opening and closing
+        //the file once it has been opened and written to
+<span class="nc" id="L129">        csvPrinter = new CSVPrinter(bufferedWriter, CSVFormat.DEFAULT.withSkipHeaderRecord());</span>
+<span class="nc" id="L130">        System.out.println(&quot;Made the writer&quot;);</span>
+<span class="nc" id="L131">        Thread writer = new Thread(new CSVRowWriterConsumer(writerQueue, writerRowPoison, csvPrinter, 2));</span>
+<span class="nc" id="L132">        writer.start();</span>
+<span class="nc" id="L133">        System.out.println(&quot;Started the writer!&quot;);</span>
+
+<span class="nc" id="L135">        System.out.println(&quot;Started the writer!&quot;);</span>
+
+        //At the end, once the thread is done (i.e. not alive), we close the file
+<span class="nc bnc" id="L138" title="All 2 branches missed.">        while(writer.isAlive()) {</span>
+            //While the thread is alive, we wait, and then once it ends, we move to the next block
+        }
+
+        //We now close the file (buffered writer) because we know the thread has finished
+        try {
+<span class="nc bnc" id="L144" title="All 4 branches missed.">            assert bufferedWriter != null;</span>
+<span class="nc" id="L145">            bufferedWriter.close();</span>
+<span class="nc" id="L146">            System.out.println(&quot;Closed the buffered writer!&quot;);</span>
+<span class="nc" id="L147">        } catch (IOException e) {</span>
+<span class="nc" id="L148">            e.printStackTrace();</span>
+<span class="nc" id="L149">        }</span>
+
+<span class="nc" id="L151">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

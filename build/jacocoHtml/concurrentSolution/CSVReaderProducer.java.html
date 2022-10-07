@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CSVReaderProducer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assignment5</a> &gt; <a href="index.source.html" class="el_package">concurrentSolution</a> &gt; <span class="el_source">CSVReaderProducer.java</span></div><h1>CSVReaderProducer.java</h1><pre class="source lang-java linenums">package concurrentSolution;
+
+import sequentialSolution.NoSuchDirectoryException;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Objects;
+import java.util.StringTokenizer;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Class to represent a Producer that reads a CSV file of student click data
+ * Since it is designed to work in a Thread, it needs to implement Runnable and override run()
+ * The class just opens and parses the rows of a CSV file from a folder path provided by user
+ * The rows are parsed and written to a BlockingQueue for multiple consumers to take from
+ */
+public class CSVReaderProducer implements Runnable {
+
+    private static final String STUDENT_CLICKS = &quot;studentVle.csv&quot;;
+    private static final String STUDENT_CLICKS_TEST = &quot;studentVle_sample.csv&quot;;
+    private static final String SPLIT_BY = &quot;(?&lt;=\\\&quot;)[^,;](.*?)(?=\\\&quot;)&quot;;
+    private String csvFile;
+    private final String folderPath;
+    private final String mode;
+    private final BlockingQueue&lt;CSVRow&gt; queue;
+    private final CSVRow poison;
+    private final int N_POISON_PER_PRODUCER;
+    private AtomicInteger fileSize;
+
+    /**
+     * Constructor method for the CSVReaderProducer class
+     * @param csvFolder String path to the folder
+     * @param mode String of either test or prod mode to switch the hard-coded file name
+     * @param queue BlockingQueue from Driver that the CSV rows will be stored in
+     * @param poison CSV row poison pill that will kill each consumer thread
+     * @param N_POISON_PER_PRODUCER
+     * @throws NoSuchDirectoryException
+     */
+<span class="nc" id="L42">    CSVReaderProducer(String csvFolder, String mode, BlockingQueue&lt;CSVRow&gt; queue, CSVRow poison, int N_POISON_PER_PRODUCER) throws NoSuchDirectoryException {</span>
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        if (!(new File(csvFolder).exists())) {</span>
+<span class="nc" id="L44">            throw new NoSuchDirectoryException(&quot;The specified folder path does not exist. &quot;</span>
+                    + &quot;Please enter a valid folder path.&quot;);
+        } else {
+<span class="nc" id="L47">            this.mode = mode;</span>
+<span class="nc" id="L48">            this.folderPath = csvFolder;</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">            if (mode.equals(&quot;test&quot;)) {</span>
+<span class="nc" id="L50">                this.csvFile = csvFolder + &quot;/&quot; + STUDENT_CLICKS_TEST;</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">            } else if (mode.equals(&quot;prod&quot;)) {</span>
+<span class="nc" id="L52">                this.csvFile = csvFolder + &quot;/&quot; + STUDENT_CLICKS;</span>
+            }
+<span class="nc" id="L54">            this.queue = queue;</span>
+<span class="nc" id="L55">            this.poison = poison;</span>
+<span class="nc" id="L56">            this.N_POISON_PER_PRODUCER = N_POISON_PER_PRODUCER;</span>
+<span class="nc" id="L57">            this.fileSize = new AtomicInteger(0);</span>
+        }
+<span class="nc" id="L59">    }</span>
+
+    /**
+     * Parses the input line from BufferedReader into a StringTokenizer which is stored in an ArrayList
+     * @param inputString String from the BufferedReader
+     * @return ArrayList of strings for each row element/column
+     */
+    private ArrayList&lt;String&gt; patternMatch(String inputString) {
+<span class="nc" id="L67">        ArrayList&lt;String&gt; parsedString = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">        if (mode.equals(&quot;test&quot;)) {</span>
+<span class="nc" id="L69">            StringTokenizer tokenizer = new StringTokenizer(inputString, &quot;,&quot;);</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">            while (tokenizer.hasMoreTokens()) {</span>
+<span class="nc" id="L71">                parsedString.add(tokenizer.nextToken());</span>
+            }
+<span class="nc" id="L73">        } else {</span>
+<span class="nc" id="L74">            Pattern pattern = Pattern.compile(SPLIT_BY);</span>
+<span class="nc" id="L75">            Matcher matcher = pattern.matcher(inputString);</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">            while (matcher.find()) {</span>
+<span class="nc" id="L77">                parsedString.add(matcher.group());</span>
+            }
+        }
+<span class="nc" id="L80">        return parsedString;</span>
+    }
+
+    /**
+     * Takes the tokenized string from BufferedReader and creates a new InbouncCSVRow object
+     * @param line String line from the BufferedReader
+     * @return InbouncCSVRow custom class to store in BlockingQueue
+     */
+    public CSVRow parseCSVRow(String line) {
+<span class="nc" id="L89">        ArrayList&lt;String&gt; parsedRow = patternMatch(line);</span>
+//        System.out.println(parsedRow);
+<span class="nc" id="L91">        String module = parsedRow.get(0);</span>
+<span class="nc" id="L92">        String presentation = parsedRow.get(1);</span>
+<span class="nc" id="L93">        Integer student = Integer.parseInt(parsedRow.get(2));</span>
+<span class="nc" id="L94">        Integer site = Integer.parseInt(parsedRow.get(3));</span>
+<span class="nc" id="L95">        String date = parsedRow.get(4);</span>
+<span class="nc" id="L96">        Integer clicks = Integer.parseInt(parsedRow.get(5));</span>
+//        System.out.println(module + &quot; &quot; + presentation + &quot; &quot; + student + &quot; &quot; + site + &quot; &quot; + date + &quot; &quot; + clicks);
+<span class="nc" id="L98">        return new CSVRow(module, presentation, student, site, date, clicks);</span>
+    }
+
+    /**
+     * Method to get the size of the CSV file in row count
+     * @return int of the file size
+     */
+<span class="nc" id="L105">    public int getFileSize() { return this.fileSize.get(); }</span>
+
+    /**
+     * Method to get the full string file path of the CSV
+     * @return String of the file path in folder
+     */
+<span class="nc" id="L111">    public String getCsvFile() { return this.csvFile; }</span>
+
+    /**
+     * Override of Runnable.run() method to take each line from CSV file and pass to BlockingQueue
+     * At the end when there is nothing else to read, it stashes a poison pill for each consumer
+     */
+    @Override
+    public void run() {
+<span class="nc" id="L119">        try (BufferedReader reader = new BufferedReader(new FileReader(this.csvFile))) {</span>
+<span class="nc" id="L120">            String headers = reader.readLine();</span>
+            String newLine;
+<span class="nc bnc" id="L122" title="All 2 branches missed.">            while ((newLine = reader.readLine()) != null) {</span>
+//                System.out.println(&quot;Parsing row: &quot; + newLine);
+<span class="nc" id="L124">                queue.put(parseCSVRow(newLine));</span>
+<span class="nc" id="L125">                this.fileSize.getAndIncrement();</span>
+            }
+<span class="nc" id="L127">        } catch (IOException | InterruptedException e) {</span>
+<span class="nc" id="L128">            Thread.currentThread().interrupt();</span>
+        } finally {
+            while (true) {
+                try {
+<span class="nc bnc" id="L132" title="All 2 branches missed.">                    for (int i=0; i &lt; this.N_POISON_PER_PRODUCER; i++) {</span>
+//                        System.out.println(Thread.currentThread().getName() + &quot; adding poison pill to BlockingQueue&quot;);
+<span class="nc" id="L134">                        queue.put(this.poison);</span>
+<span class="nc" id="L135">                        this.fileSize.getAndIncrement();</span>
+                    }
+<span class="nc" id="L137">                    break;</span>
+<span class="nc" id="L138">                } catch (InterruptedException e) {</span>
+                    try {
+<span class="nc" id="L140">                        throw new InterruptedException(Thread.currentThread().getName() + &quot; has been interrupted.&quot;);</span>
+<span class="nc" id="L141">                    } catch (InterruptedException interruptedException) {</span>
+<span class="nc" id="L142">                        interruptedException.printStackTrace();</span>
+                    }
+<span class="nc" id="L144">                }</span>
+            }
+        }
+<span class="nc" id="L147">    }</span>
+
+    /**
+     * Override of default equals() method
+     * @param o object
+     * @return boolean
+     */
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        if (this == o) return true;</span>
+<span class="nc bnc" id="L157" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="nc" id="L158">        CSVReaderProducer that = (CSVReaderProducer) o;</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        return Objects.equals(csvFile, that.csvFile) &amp;&amp;</span>
+<span class="nc bnc" id="L160" title="All 2 branches missed.">                Objects.equals(folderPath, that.folderPath) &amp;&amp;</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">                Objects.equals(queue, that.queue);</span>
+    }
+
+    /**
+     * Override of default hashCode() method
+     * @return int
+     */
+    @Override
+    public int hashCode() {
+<span class="nc" id="L170">        return Objects.hash(csvFile, folderPath, queue);</span>
+    }
+
+    /**
+     * Override of default toString() method
+     * @return String
+     */
+    @Override
+    public String toString() {
+<span class="nc" id="L179">        return &quot;CSVReaderProducer{&quot; +</span>
+                &quot;csvFile='&quot; + csvFile + '\'' +
+                &quot;, folderPath='&quot; + folderPath + '\'' +
+                &quot;, queue=&quot; + queue +
+                '}';
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

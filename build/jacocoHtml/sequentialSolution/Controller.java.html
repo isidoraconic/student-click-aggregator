@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Controller.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assignment5</a> &gt; <a href="index.source.html" class="el_package">sequentialSolution</a> &gt; <span class="el_source">Controller.java</span></div><h1>Controller.java</h1><pre class="source lang-java linenums">package sequentialSolution;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.HashMap;
+
+/**
+ * Class to represent the main file controller that will drive the CSV reading and writing processes
+ * Includes a controller, as well as getters and setters for data objects used
+ * E.g. the string file path from CLI argument, aggregated student click data
+ */
+public class Controller {
+
+    private String folderPath;
+    private String fullFilePath;
+    private HashMap&lt;String, HashMap&lt;String, Integer&gt;&gt; clickData;
+    private static final String STUDENT_CLICKS = &quot;studentVle.csv&quot;;
+    private static final String STUDENT_CLICKS_TEST = &quot;studentVle_sample.csv&quot;;
+
+    /**
+     * Constructor method for controller class which takes the String folder path argument
+     * Checks if the provided folder path is a valid path on the system before storing property
+     * @param argPath String path from CLI argument
+     * @throws FileNotFoundException default FileNotFoundException error
+     */
+<span class="nc" id="L27">    public Controller(String argPath) throws NoSuchDirectoryException {</span>
+<span class="nc bnc" id="L28" title="All 2 branches missed.">        if (!(new File(argPath).exists())) {</span>
+<span class="nc" id="L29">            throw new NoSuchDirectoryException(&quot;The specified folder path does not exist.&quot;</span>
+                    + &quot;Please enter a valid folder path.&quot;);
+        } else {
+<span class="nc" id="L32">            this.folderPath = argPath;</span>
+        }
+<span class="nc" id="L34">    }</span>
+
+<span class="nc" id="L36">    public String getFolderPath() { return this.folderPath; }</span>
+
+    /**
+     * Method to set the full file path concatenating CLI argument to the hard coded CSV file name
+     */
+<span class="nc" id="L41">    public void setFilePath() { this.fullFilePath = this.folderPath + '/' + STUDENT_CLICKS_TEST;}</span>
+
+    /**
+     * Method to get the full concatenated string file path
+     * @return String full path to CSV file for reading
+     */
+<span class="nc" id="L47">    public String getFilePath() { return this.fullFilePath; }</span>
+
+    /**
+     * Method to get the HashMap click data property
+     * @return Hashmap object of student click data
+     */
+<span class="nc" id="L53">    public HashMap&lt;String, HashMap&lt;String, Integer&gt;&gt; getClickData() { return this.clickData; }</span>
+
+    /**
+     * Main method to drive the program, controls both the CSVReader and CSVWriter classes
+     * @param args CLI arguments passed when program runs
+     * @throws IOException default IOException error
+     * @throws FileNotFoundException default FileNotFoundException error
+     */
+    public static void main(String[] args) throws IOException, NoSuchDirectoryException {
+<span class="nc" id="L62">        Controller cliControl = new Controller(args[0]);</span>
+<span class="nc" id="L63">        cliControl.setFilePath();</span>
+<span class="nc" id="L64">        CSVReader reader = new CSVReader(cliControl.getFilePath());</span>
+<span class="nc" id="L65">        CSVWriter writer = new CSVWriter(cliControl.getFolderPath());</span>
+<span class="nc" id="L66">        writer.writeFiles(reader);</span>
+<span class="nc" id="L67">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
